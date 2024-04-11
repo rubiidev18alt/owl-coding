@@ -1,359 +1,276 @@
-<!DOCTYPE html>
+
 <html>
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="google" value="notranslate">
-  <title>Blockly Demo:</title>
-  <link rel="stylesheet" href="style.css">
-  <script src="/storage.js"></script>
-  <script src="../../dist/blockly_compressed.js"></script>
-  <script src="../../dist/blocks_compressed.js"></script>
-  <script src="../../dist/javascript_compressed.js"></script>
-  <script src="../../dist/python_compressed.js"></script>
-  <script src="../../dist/php_compressed.js"></script>
-  <script src="../../dist/lua_compressed.js"></script>
-  <script src="../../dist/dart_compressed.js"></script>
-  <script src="code.js"></script>
+  <title>Blockly Demo: Code</title>
+  <script>
+/**
+ * List of tab names.
+ * @private
+ */
+var TABS_ = ['blocks', 'javascript', 'dart', 'python', 'xml'];
+
+/**
+ * Switch the visible pane when a tab is clicked.
+ * @param {string} id ID of tab clicked.
+ */
+function tabClick(id) {
+  var xmlTextarea = document.getElementById('textarea_xml');
+  // If the XML tab was open, save and render the content.
+  if (document.getElementById('tab_xml').className == 'tabon') {
+    var xmlText = xmlTextarea.value;
+    var xmlDom = null;
+    try {
+      xmlDom = Blockly.Xml.textToDom(xmlText);
+    } catch (e) {
+      var q =
+          window.confirm('Error parsing XML:\n' + e + '\n\nAbandon changes?');
+      if (!q) {
+        // Leave the user on the XML tab.
+        return;
+      }
+    }
+    if (xmlDom) {
+      Blockly.mainWorkspace.clear();
+      Blockly.Xml.domToWorkspace(Blockly.mainWorkspace, xmlDom);
+    }
+  }
+
+  // Deselect all tabs and hide all panes.
+  for (var x in TABS_) {
+    document.getElementById('tab_' + TABS_[x]).className = 'taboff';
+    document.getElementById('content_' + TABS_[x]).style.display = 'none';
+  }
+
+  // Select the active tab.
+  document.getElementById(id).className = 'tabon';
+  // Show the selected pane.
+  var content = document.getElementById(id.replace('tab_', 'content_'));
+  content.style.display = 'block';
+
+  // Initialize the pane.
+  if (id == 'tab_blocks') {
+    // If the workspace was changed by the XML tab, Firefox will have performed
+    // an incomplete rendering due to Blockly being invisible.  Rerender.
+    Blockly.mainWorkspace.render();
+  } else if (id == 'tab_xml') {
+    var xmlDom = Blockly.Xml.workspaceToDom(Blockly.mainWorkspace);
+    var xmlText = Blockly.Xml.domToPrettyText(xmlDom);
+    xmlTextarea.value = xmlText;
+    xmlTextarea.focus();
+  } else if (id == 'tab_javascript') {
+    content.innerHTML = Blockly.Generator.workspaceToCode('JavaScript');
+  } else if (id == 'tab_dart') {
+    content.innerHTML = Blockly.Generator.workspaceToCode('Dart');
+  } else if (id == 'tab_python') {
+    content.innerHTML = Blockly.Generator.workspaceToCode('Python');
+  }
+}
+
+/**
+ * Initialize Blockly.  Called on page load.
+ * @param {!Blockly} blockly Instance of Blockly from iframe.
+ */
+function init(blockly) {
+  //window.onbeforeunload = function() {
+  //  return 'Leaving this page will result in the loss of your work.';
+  //};
+
+  window.Blockly = blockly;
+
+  // Make the 'Blocks' tab line up with the toolbox.
+  if (Blockly.Toolbox) {
+    Blockly.bindEvent_(window, 'resize', null, function() {
+      document.getElementById('tab_blocks').style.minWidth =
+          (Blockly.Toolbox.width - 38) + 'px';
+          // Account for the 19 pixel margin and on each side.
+      });
+    window.setTimeout(function() {
+        Blockly.fireUiEvent(document, window, 'resize');
+      }, 1);
+  }
+
+  restore_blocks();
+  Blockly.bindEvent_(window, 'unload', null, backup_blocks);
+}
+
+/**
+ * Execute the user's code.
+ * Just a quick and dirty eval.  No checks for infinite loops, etc.
+ */
+function runJS() {
+  var code = Blockly.Generator.workspaceToCode('JavaScript');
+  try {
+    eval(code);
+  } catch (e) {
+    alert('Program error:\n' + e);
+  }
+}
+
+/**
+ * Backup code blocks to localStorage.
+ */
+function backup_blocks() {
+  if ('localStorage' in window) {
+    var xml = Blockly.Xml.workspaceToDom(Blockly.mainWorkspace);
+    window.localStorage.setItem('blocks', Blockly.Xml.domToText(xml));
+  }
+}
+
+/**
+ * Restore code blocks from localStorage.
+ */
+function restore_blocks() {
+  if ('localStorage' in window && window.localStorage.blocks) {
+    var xml = Blockly.Xml.textToDom(window.localStorage.blocks);
+    Blockly.Xml.domToWorkspace(Blockly.mainWorkspace, xml);
+  }
+}
+
+/**
+ * Discard all blocks from the workspace.
+ */
+function discard() {
+  var count = Blockly.mainWorkspace.getAllBlocks().length;
+  if (count < 2 || window.confirm('Delete all ' + count + ' blocks?')) {
+    Blockly.mainWorkspace.clear();
+  }
+}
+  </script>
+  <style>
+    body {
+      background-color: white;
+      font-family: sans-serif;
+    }
+    h1 {
+      font-weight: normal;
+      font-size: 140%;
+    }
+    td {
+      vertical-align: top;
+    }
+
+    /* Tabs */
+    #tabRow>td {
+      border: 1px solid #ccc;
+    }
+    td.tabon {
+      border-bottom-color: #ddd !important;
+      background-color: #ddd;
+      padding: 5px 19px;
+    }
+    td.taboff {
+      cursor: pointer;
+      padding: 5px 19px;
+    }
+    td.taboff:hover {
+      background-color: #eee;
+    }
+    td.tabmin {
+      border-top-style: none !important;
+      border-left-style: none !important;
+      border-right-style: none !important;
+    }
+    td.tabmax {
+      border-top-style: none !important;
+      border-left-style: none !important;
+      border-right-style: none !important;
+      width: 99%;
+      text-align: right;
+    }
+
+    table {
+      border-collapse: collapse;
+      margin: 0;
+      padding: 0;
+      border: none;
+    }
+    td {
+      padding: 0;
+    }
+    pre,
+    #content_xml {
+      width: 100%;
+      height: 100%;
+      padding: 0;
+      margin: 0;
+      border: 1px solid #ccc;
+      border-top-style: none;
+      overflow: hidden;
+      display: none;
+    }
+    #textarea_xml {
+      width: 100%;
+      height: 100%;
+      border: none;
+      resize: none;
+    }
+    iframe {
+      width: 100%;
+      height: 100%;
+      border: 1px solid #ccc;
+      border-top-style: none;
+    }
+    button {
+      padding: 1px 1em;
+      font-size: 90%;
+      border-radius: 4px;
+      border: 1px solid #ddd;
+      background-color: #eee;
+      color: black;
+    }
+    button.launch {
+      border: 1px solid #d43;
+      background-color: #d43;
+      color: white;
+    }
+    button:active {
+      border: 1px solid blue !important;
+    }
+    button:hover {
+      box-shadow: 2px 2px 5px #888;
+    }
+  </style>
 </head>
 <body>
-  <table width="100%" height="100%">
+  <table height="100%" width="100%">
     <tr>
       <td>
-        <h1><a href="https://developers.google.com/blockly/">Blockly</a>&rlm; &gt;
-          <a href="../index.html">Demos</a>&rlm; &gt;
-          <span id="title">...</span>
-        </h1>
-      </td>
-      <td class="farSide">
-        <select id="languageMenu"></select>
-        <a class="privacyLink" href="https://policies.google.com/privacy">Privacy</a>
+        <h1><a href="http://code.google.com/p/blockly/">Blockly</a> &gt; <a href="../index.html">Demos</a> &gt; Code</h1>
       </td>
     </tr>
     <tr>
-      <td colspan=2>
-        <table width="100%">
+      <td>
+        <table>
           <tr id="tabRow" height="1em">
-            <td id="tab_blocks" class="tabon">...</td>
-            <td class="tabmin tab_collapse">&nbsp;</td>
-            <td id="tab_javascript" class="taboff tab_collapse">JavaScript</td>
-            <td class="tabmin tab_collapse">&nbsp;</td>
-            <td id="tab_python" class="taboff tab_collapse">Python</td>
-            <td class="tabmin tab_collapse">&nbsp;</td>
-            <td id="tab_php" class="taboff tab_collapse">PHP</td>
-            <td class="tabmin tab_collapse">&nbsp;</td>
-            <td id="tab_lua" class="taboff tab_collapse">Lua</td>
-            <td class="tabmin tab_collapse">&nbsp;</td>
-            <td id="tab_dart" class="taboff tab_collapse">Dart</td>
-            <td class="tabmin tab_collapse">&nbsp;</td>
-            <td id="tab_xml" class="taboff tab_collapse">XML</td>
-            <td class="tabmin tab_collapse">&nbsp;</td>
-            <td id="tab_json" class="taboff tab_collapse">JSON</td>
+            <td id="tab_blocks" class="tabon" onclick="tabClick(this.id)">Blocks</td>
             <td class="tabmin">&nbsp;</td>
-            <td id="tab_code" class="taboff">
-              <select id="code_menu"></select>
-            </td>
+            <td id="tab_javascript" class="taboff" onclick="tabClick(this.id)">JavaScript</td>
+            <td class="tabmin">&nbsp;</td>
+            <td id="tab_dart" class="taboff" onclick="tabClick(this.id)">Dart</td>
+            <td class="tabmin">&nbsp;</td>
+            <td id="tab_python" class="taboff" onclick="tabClick(this.id)">Python</td>
+            <td class="tabmin">&nbsp;</td>
+            <td id="tab_xml" class="taboff" onclick="tabClick(this.id)">XML</td>
             <td class="tabmax">
-              <button id="trashButton" class="notext" title="...">
-                <img src='../../media/1x1.gif' class="trash icon21">
-              </button>
-              <button id="linkButton" class="notext" title="...">
-                <img src='../../media/1x1.gif' class="link icon21">
-              </button>
-              <button id="runButton" class="notext primary" title="...">
-                <img src='../../media/1x1.gif' class="run icon21">
-              </button>
+              <button onclick="discard()">Discard</button>
+              <button class="launch" onclick="runJS()">Run Program</button>
             </td>
           </tr>
         </table>
       </td>
     </tr>
     <tr>
-      <td height="99%" colspan=2 id="content_area">
+      <td height="99%">
+        <iframe id="content_blocks" src="frame.html"></iframe>
+        <pre id="content_javascript"></pre>
+        <pre id="content_dart"></pre>
+        <pre id="content_python"></pre>
+        <div id="content_xml">
+          <textarea id="textarea_xml"></textarea>
+        </div>
       </td>
     </tr>
   </table>
-  <div id="content_blocks" class="content"></div>
-  <pre id="content_javascript" class="content prettyprint lang-js"></pre>
-  <pre id="content_python" class="content prettyprint lang-py"></pre>
-  <pre id="content_php" class="content prettyprint lang-php"></pre>
-  <pre id="content_lua" class="content prettyprint lang-lua"></pre>
-  <pre id="content_dart" class="content prettyprint lang-dart"></pre>
-  <textarea id="content_xml" class="content" wrap="off"></textarea>
-  <textarea id="content_json" class="content" wrap="off"></textarea>
-
-  <xml xmlns="https://developers.google.com/blockly/xml" id="toolbox" style="display: none">
-    <category name="%{BKY_CATLOGIC}" colour="%{BKY_LOGIC_HUE}">
-      <block type="controls_if"></block>
-      <block type="logic_compare"></block>
-      <block type="logic_operation"></block>
-      <block type="logic_negate"></block>
-      <block type="logic_boolean"></block>
-      <block type="logic_null"></block>
-      <block type="logic_ternary"></block>
-    </category>
-    <category name="%{BKY_CATLOOPS}" colour="%{BKY_LOOPS_HUE}">
-      <block type="controls_repeat_ext">
-        <value name="TIMES">
-          <shadow type="math_number">
-            <field name="NUM">10</field>
-          </shadow>
-        </value>
-      </block>
-      <block type="controls_whileUntil"></block>
-      <block type="controls_for">
-        <value name="FROM">
-          <shadow type="math_number">
-            <field name="NUM">1</field>
-          </shadow>
-        </value>
-        <value name="TO">
-          <shadow type="math_number">
-            <field name="NUM">10</field>
-          </shadow>
-        </value>
-        <value name="BY">
-          <shadow type="math_number">
-            <field name="NUM">1</field>
-          </shadow>
-        </value>
-      </block>
-      <block type="controls_forEach"></block>
-      <block type="controls_flow_statements"></block>
-    </category>
-    <category name="%{BKY_CATMATH}" colour="%{BKY_MATH_HUE}">
-      <block type="math_number">
-        <field name="NUM">123</field>
-      </block>
-      <block type="math_arithmetic">
-        <value name="A">
-          <shadow type="math_number">
-            <field name="NUM">1</field>
-          </shadow>
-        </value>
-        <value name="B">
-          <shadow type="math_number">
-            <field name="NUM">1</field>
-          </shadow>
-        </value>
-      </block>
-      <block type="math_single">
-        <value name="NUM">
-          <shadow type="math_number">
-            <field name="NUM">9</field>
-          </shadow>
-        </value>
-      </block>
-      <block type="math_trig">
-        <value name="NUM">
-          <shadow type="math_number">
-            <field name="NUM">45</field>
-          </shadow>
-        </value>
-      </block>
-      <block type="math_constant"></block>
-      <block type="math_number_property">
-        <value name="NUMBER_TO_CHECK">
-          <shadow type="math_number">
-            <field name="NUM">0</field>
-          </shadow>
-        </value>
-      </block>
-      <block type="math_round">
-        <value name="NUM">
-          <shadow type="math_number">
-            <field name="NUM">3.1</field>
-          </shadow>
-        </value>
-      </block>
-      <block type="math_on_list"></block>
-      <block type="math_modulo">
-        <value name="DIVIDEND">
-          <shadow type="math_number">
-            <field name="NUM">64</field>
-          </shadow>
-        </value>
-        <value name="DIVISOR">
-          <shadow type="math_number">
-            <field name="NUM">10</field>
-          </shadow>
-        </value>
-      </block>
-      <block type="math_constrain">
-        <value name="VALUE">
-          <shadow type="math_number">
-            <field name="NUM">50</field>
-          </shadow>
-        </value>
-        <value name="LOW">
-          <shadow type="math_number">
-            <field name="NUM">1</field>
-          </shadow>
-        </value>
-        <value name="HIGH">
-          <shadow type="math_number">
-            <field name="NUM">100</field>
-          </shadow>
-        </value>
-      </block>
-      <block type="math_random_int">
-        <value name="FROM">
-          <shadow type="math_number">
-            <field name="NUM">1</field>
-          </shadow>
-        </value>
-        <value name="TO">
-          <shadow type="math_number">
-            <field name="NUM">100</field>
-          </shadow>
-        </value>
-      </block>
-      <block type="math_random_float"></block>
-      <block type="math_atan2">
-        <value name="X">
-          <shadow type="math_number">
-            <field name="NUM">1</field>
-          </shadow>
-        </value>
-        <value name="Y">
-          <shadow type="math_number">
-            <field name="NUM">1</field>
-          </shadow>
-        </value>
-      </block>
-    </category>
-    <category name="%{BKY_CATTEXT}" colour="%{BKY_TEXTS_HUE}">
-      <block type="text"></block>
-      <block type="text_join"></block>
-      <block type="text_append">
-        <value name="TEXT">
-          <shadow type="text"></shadow>
-        </value>
-      </block>
-      <block type="text_length">
-        <value name="VALUE">
-          <shadow type="text">
-            <field name="TEXT">abc</field>
-          </shadow>
-        </value>
-      </block>
-      <block type="text_isEmpty">
-        <value name="VALUE">
-          <shadow type="text">
-            <field name="TEXT"></field>
-          </shadow>
-        </value>
-      </block>
-      <block type="text_indexOf">
-        <value name="VALUE">
-          <block type="variables_get">
-            <field name="VAR">{textVariable}</field>
-          </block>
-        </value>
-        <value name="FIND">
-          <shadow type="text">
-            <field name="TEXT">abc</field>
-          </shadow>
-        </value>
-      </block>
-      <block type="text_charAt">
-        <value name="VALUE">
-          <block type="variables_get">
-            <field name="VAR">{textVariable}</field>
-          </block>
-        </value>
-      </block>
-      <block type="text_getSubstring">
-        <value name="STRING">
-          <block type="variables_get">
-            <field name="VAR">{textVariable}</field>
-          </block>
-        </value>
-      </block>
-      <block type="text_changeCase">
-        <value name="TEXT">
-          <shadow type="text">
-            <field name="TEXT">abc</field>
-          </shadow>
-        </value>
-      </block>
-      <block type="text_trim">
-        <value name="TEXT">
-          <shadow type="text">
-            <field name="TEXT">abc</field>
-          </shadow>
-        </value>
-      </block>
-      <block type="text_print">
-        <value name="TEXT">
-          <shadow type="text">
-            <field name="TEXT">abc</field>
-          </shadow>
-        </value>
-      </block>
-      <block type="text_prompt_ext">
-        <value name="TEXT">
-          <shadow type="text">
-            <field name="TEXT">abc</field>
-          </shadow>
-        </value>
-      </block>
-    </category>
-    <category name="%{BKY_CATLISTS}" colour="%{BKY_LISTS_HUE}">
-      <block type="lists_create_with">
-        <mutation items="0"></mutation>
-      </block>
-      <block type="lists_create_with"></block>
-      <block type="lists_repeat">
-        <value name="NUM">
-          <shadow type="math_number">
-            <field name="NUM">5</field>
-          </shadow>
-        </value>
-      </block>
-      <block type="lists_length"></block>
-      <block type="lists_isEmpty"></block>
-      <block type="lists_indexOf">
-        <value name="VALUE">
-          <block type="variables_get">
-            <field name="VAR">{listVariable}</field>
-          </block>
-        </value>
-      </block>
-      <block type="lists_getIndex">
-        <value name="VALUE">
-          <block type="variables_get">
-            <field name="VAR">{listVariable}</field>
-          </block>
-        </value>
-      </block>
-      <block type="lists_setIndex">
-        <value name="LIST">
-          <block type="variables_get">
-            <field name="VAR">{listVariable}</field>
-          </block>
-        </value>
-      </block>
-      <block type="lists_getSublist">
-        <value name="LIST">
-          <block type="variables_get">
-            <field name="VAR">{listVariable}</field>
-          </block>
-        </value>
-      </block>
-      <block type="lists_split">
-        <value name="DELIM">
-          <shadow type="text">
-            <field name="TEXT">,</field>
-          </shadow>
-        </value>
-      </block>
-      <block type="lists_sort"></block>
-    </category>
-    <sep></sep>
-    <category name="%{BKY_CATVARIABLES}" colour="%{BKY_VARIABLES_HUE}" custom="VARIABLE"></category>
-    <category name="%{BKY_CATFUNCTIONS}" colour="%{BKY_PROCEDURES_HUE}" custom="PROCEDURE"></category>
-  </xml>
-
 </body>
 </html>
